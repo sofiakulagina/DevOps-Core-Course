@@ -1,5 +1,7 @@
 # DevOps Info Service (Lab 1)
 
+[![Python CI and Docker Release](https://github.com/sofiakulagina/DevOps-Core-Course/actions/workflows/python-ci.yml/badge.svg?branch=main)](https://github.com/sofiakulagina/DevOps-Core-Course/actions/workflows/python-ci.yml)
+
 ## Overview
 
 This project implements a simple **DevOps info service** written in Python using **Flask**. The service exposes HTTP endpoints that return detailed information about the application, the underlying system, and its runtime health. It is the base for later labs (Docker, CI/CD, monitoring, persistence, etc.).
@@ -14,9 +16,9 @@ This project implements a simple **DevOps info service** written in Python using
 
 ```bash
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate  
 pip install -r requirements.txt
-cp .env_example .env      # create local env file from example
+cp .env_example .env 
 ```
 
 ## Running the Application
@@ -125,8 +127,9 @@ Notes:
 Workflow file: `.github/workflows/python-ci.yml`
 
 It runs on:
-- `push` to `main` and `pull_request` into `main` for lint + tests.
+- `push` to `main` and `lab3`, and `pull_request` into `main` for lint + tests.
 - `push` of SemVer git tags (`vX.Y.Z`) for Docker build and push.
+- manual run via `workflow_dispatch`.
 
 ### Versioning Strategy
 
@@ -160,3 +163,53 @@ git push origin v1.0.0
 ```
 
 The Docker job runs only on SemVer tags and pushes images with the tags above.
+
+## CI Best Practices and Security (Task 3)
+
+### Status Badge
+
+The README includes a GitHub Actions badge for `.github/workflows/python-ci.yml` showing pass/fail status for `main`.
+
+### Dependency Caching
+
+Implemented in workflow via `actions/setup-python@v5`:
+- `cache: pip`
+- `cache-dependency-path: app_python/requirements.txt`
+
+The workflow also writes install metrics into the Job Summary for each Python version:
+- `cache-hit` (`true` or `false`)
+- `install-seconds` (dependency installation time)
+
+Speed measurement method:
+1. Compare first run after dependency change (cache miss).
+2. Compare second run with unchanged `requirements.txt` (cache hit).
+3. Calculate improvement:
+   `((miss_seconds - hit_seconds) / miss_seconds) * 100%`
+
+### Snyk Security Scanning
+
+Integrated with `snyk/actions/python@master` in a dedicated `security` job.
+
+Configuration:
+- Secret required: `SNYK_TOKEN`
+- Scan target: `app_python/requirements.txt`
+- Threshold: `high` (`--severity-threshold=high`)
+- Mode: non-blocking (`continue-on-error: true`) to keep visibility without blocking delivery during lab work.
+
+If `SNYK_TOKEN` is missing, workflow prints a clear skip message.
+
+Security results documentation:
+- Latest scan status: `Pending first run with configured SNYK_TOKEN`
+- Vulnerability handling policy: upgrade direct dependencies first; if no fix exists, track risk in lab notes and keep non-blocking scan mode.
+
+### Additional CI Best Practices Applied
+
+Implemented practices:
+- **Concurrency control:** cancels outdated runs for same ref (`cancel-in-progress: true`).
+- **Least-privilege permissions:** workflow-level `permissions: contents: read`.
+- **Matrix testing:** tests run on Python `3.11` and `3.12`.
+- **Fail-fast matrix:** stops quickly when one matrix leg fails.
+- **Job dependencies:** Docker job requires successful `test` and `security` jobs.
+- **Docker layer cache:** `cache-from/cache-to type=gha` for faster image builds.
+- **Manual trigger:** `workflow_dispatch` for controlled reruns.
+- **Timeouts:** explicit `timeout-minutes` per job to avoid stuck pipelines.
