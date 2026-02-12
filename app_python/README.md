@@ -54,6 +54,57 @@ Configuration is done via environment variables:
 
 All configuration is read in `app.py` at startup, so restart the application after changing environment variables.
 
+## Unit Testing
+
+### Framework Choice
+
+For this lab, the project uses Python `unittest`.
+
+Short comparison:
+- `pytest`: concise syntax and rich plugin ecosystem, but adds an external dependency.
+- `unittest`: part of the Python standard library, no additional package required.
+
+Why `unittest` was chosen:
+- Works out of the box in minimal lab environments.
+- Keeps dependencies small and predictable.
+- Supports fixtures (`setUpClass`) and mocking (`unittest.mock`) needed for endpoint testing.
+
+### Test Structure
+
+Tests are located in `tests/test_app.py` and cover:
+- `GET /` success response:
+  - expected top-level JSON fields,
+  - required nested fields and data types,
+  - request metadata (client IP and user-agent handling).
+- `GET /health` success response:
+  - status, timestamp, uptime checks.
+- Error responses:
+  - `404` JSON error for unknown route,
+  - simulated internal failures for `/` and `/health` returning JSON `500`.
+
+### Run Tests Locally
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python -m unittest discover -s tests -v
+```
+
+Optional coverage (standard library):
+
+```bash
+python -m trace --count --summary -m unittest discover -s tests -v
+```
+
+### Example Passing Output
+
+```text
+Ran 6 tests in 0.018s
+
+OK
+```
+
 ## Docker
 
 How to use the containerized application (patterns):
@@ -67,3 +118,45 @@ Notes:
 - The container exposes port `5002` by default (see `app.py`).
 - The image runs as a non-root user for improved security.
 
+## CI Workflow (GitHub Actions)
+
+### Workflow Overview
+
+Workflow file: `.github/workflows/python-ci.yml`
+
+It runs on:
+- `push` to `main` and `pull_request` into `main` for lint + tests.
+- `push` of SemVer git tags (`vX.Y.Z`) for Docker build and push.
+
+### Versioning Strategy
+
+Chosen strategy: **Semantic Versioning (SemVer)**.
+
+Why SemVer:
+- Clear signal for breaking vs backward-compatible changes.
+- Common convention for releases and container tags.
+
+Docker tags produced on `vX.Y.Z`:
+- `X.Y.Z` (full version)
+- `X.Y` (rolling minor)
+- `latest`
+
+Example:
+- `username/devops-info-service:1.2.3`
+- `username/devops-info-service:1.2`
+- `username/devops-info-service:latest`
+
+### Secrets Required
+
+Add these GitHub repository secrets:
+- `DOCKERHUB_USERNAME`
+- `DOCKERHUB_TOKEN` (Docker Hub access token)
+
+### Release Flow
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+The Docker job runs only on SemVer tags and pushes images with the tags above.
