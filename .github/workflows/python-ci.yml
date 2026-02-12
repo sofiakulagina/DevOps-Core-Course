@@ -86,15 +86,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r app_python/requirements.txt
 
+      - name: Set up Snyk CLI
+        if: ${{ env.SNYK_TOKEN != '' }}
+        uses: snyk/actions/setup@master
+
       - name: Run Snyk scan (high and critical)
         if: ${{ env.SNYK_TOKEN != '' }}
-        uses: snyk/actions/python@master
         continue-on-error: true
         env:
           SNYK_TOKEN: ${{ env.SNYK_TOKEN }}
-        with:
-          command: test
-          args: --file=app_python/requirements.txt --severity-threshold=high
+        run: snyk test --file=app_python/requirements.txt --severity-threshold=high
 
       - name: Snyk token reminder
         if: ${{ env.SNYK_TOKEN == '' }}
