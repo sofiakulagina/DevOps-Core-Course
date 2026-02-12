@@ -170,6 +170,10 @@ The Docker job runs only on SemVer tags and pushes images with the tags above.
 
 The README includes a GitHub Actions badge for `.github/workflows/python-ci.yml` showing pass/fail status for `main`.
 
+Badge and workflow link:
+- Badge: `https://github.com/sofiakulagina/DevOps-Core-Course/actions/workflows/python-ci.yml/badge.svg?branch=main`
+- Workflow runs: `https://github.com/sofiakulagina/DevOps-Core-Course/actions/workflows/python-ci.yml`
+
 ### Dependency Caching
 
 Implemented in workflow via `actions/setup-python@v5`:
@@ -180,15 +184,28 @@ The workflow also writes install metrics into the Job Summary for each Python ve
 - `cache-hit` (`true` or `false`)
 - `install-seconds` (dependency installation time)
 
-Speed measurement method:
-1. Compare first run after dependency change (cache miss).
-2. Compare second run with unchanged `requirements.txt` (cache hit).
-3. Calculate improvement:
-   `((miss_seconds - hit_seconds) / miss_seconds) * 100%`
+Measured baseline from workflow summary:
+- Python 3.11: `cache-hit=false`, `install-seconds=5`
+- Python 3.12: `cache-hit=false`, `install-seconds=3`
+
+How speed improvement is measured:
+1. Run workflow once after dependency change (cache miss baseline).
+2. Run workflow again without changing `app_python/requirements.txt` (expected cache hit).
+3. Compare `install-seconds` from Job Summary:
+   `improvement_percent = ((miss_seconds - hit_seconds) / miss_seconds) * 100`
+
+Current status:
+- Baseline (miss) is recorded.
+- Next run is needed to capture hit values and final percentage.
+
+Metrics screenshot:
+- Link: `docs/screenshots/metrics_lab3.png`
+
+![Dependency metrics screenshot](docs/screenshots/metrics_lab3.png)
 
 ### Snyk Security Scanning
 
-Integrated with `snyk/actions/python@master` in a dedicated `security` job.
+Integrated with `snyk/actions/setup@master` and `snyk test` CLI command in a dedicated `security` job.
 
 Configuration:
 - Secret required: `SNYK_TOKEN`
@@ -199,8 +216,22 @@ Configuration:
 If `SNYK_TOKEN` is missing, workflow prints a clear skip message.
 
 Security results documentation:
-- Latest scan status: `Pending first run with configured SNYK_TOKEN`
+- Latest scan status: `Succeeded`
+- Scan output: `Tested 7 dependencies for known issues, no vulnerable paths found.`
+- Vulnerability count: `0` (for threshold `high`)
 - Vulnerability handling policy: upgrade direct dependencies first; if no fix exists, track risk in lab notes and keep non-blocking scan mode.
+
+Snyk screenshot:
+- Link: `docs/screenshots/snyk_lab3.png`
+
+![Snyk scan screenshot](docs/screenshots/snyk_lab3.png)
+
+How to get `SNYK_TOKEN`:
+1. Open `https://app.snyk.io`
+2. Go to `Account Settings` -> `API Token`
+3. Copy token and add GitHub secret:
+   `Repository Settings` -> `Secrets and variables` -> `Actions` -> `New repository secret`
+4. Secret name must be `SNYK_TOKEN`
 
 ### Additional CI Best Practices Applied
 
@@ -213,3 +244,15 @@ Implemented practices:
 - **Docker layer cache:** `cache-from/cache-to type=gha` for faster image builds.
 - **Manual trigger:** `workflow_dispatch` for controlled reruns.
 - **Timeouts:** explicit `timeout-minutes` per job to avoid stuck pipelines.
+
+### Docker Build Evidence
+
+From `Build and Push Docker Image` summary:
+- Build status: `completed`
+- Build duration: `17s`
+- Docker build cache usage in that run: `0%`
+
+Final CI/CD execution screenshot:
+- Link: `docs/screenshots/artifacts_lab3.png`
+
+![Final CI/CD screenshot](docs/screenshots/artifacts_lab3.png)
