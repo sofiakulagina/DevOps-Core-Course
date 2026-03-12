@@ -1,0 +1,27 @@
+---
+# Application configuration
+web_app_name: "{{ app_name | default('devops-app') }}"
+web_app_docker_image: "{{ docker_image | default((dockerhub_username | default('your_dockerhub_username')) ~ '/devops-info-service') }}"
+web_app_docker_tag: "{{ docker_tag | default('latest') }}"
+web_app_port: "{{ app_port | default(8000) }}"
+web_app_internal_port: "{{ app_internal_port | default(8000) }}"
+
+# Docker Compose project configuration
+web_app_compose_project_dir: "{{ compose_project_dir | default('/opt/' ~ web_app_name) }}"
+web_app_docker_compose_version: "{{ docker_compose_version | default('3.8') }}"
+
+# Secrets should be overridden via Ansible Vault in group_vars/all.yml.
+web_app_secret_key: "{{ app_secret_key | default('change-me-in-vault') }}"
+
+# App runtime environment passed to docker-compose template.
+web_app_env: "{{ app_env | default({'PORT': (web_app_internal_port | string), 'APP_SECRET_KEY': web_app_secret_key}) }}"
+
+# Optional Docker Hub auth for private images.
+web_app_dockerhub_username: "{{ dockerhub_username | default('') }}"
+web_app_dockerhub_password: "{{ dockerhub_password | default('') }}"
+
+# Wipe Logic Control
+# Set to true to remove application completely.
+# Wipe only: ansible-playbook playbooks/deploy.yml -e "web_app_wipe=true" --tags web_app_wipe
+# Clean install: ansible-playbook playbooks/deploy.yml -e "web_app_wipe=true"
+web_app_wipe: false
